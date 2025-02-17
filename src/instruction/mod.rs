@@ -10,7 +10,7 @@
 //! - `buy`: Instruction to buy tokens from a bonding curve by providing SOL.
 //! - `sell`: Instruction to sell tokens back to the bonding curve in exchange for SOL.
 
-use crate::{constants, PumpFun};
+use crate::{constants, trade::common::{get_bonding_curve_pda, get_global_pda, get_metadata_pda, get_mint_authority_pda}, PumpFun};
 use spl_associated_token_account::get_associated_token_address;
 
 use solana_sdk::{
@@ -94,21 +94,21 @@ impl Sell {
 ///
 /// Returns a Solana instruction that when executed will create the token and its accounts
 pub fn create(payer: &Keypair, mint: &Keypair, args: Create) -> Instruction {
-    let bonding_curve: Pubkey = PumpFun::get_bonding_curve_pda(&mint.pubkey()).unwrap();
+    let bonding_curve: Pubkey = get_bonding_curve_pda(&mint.pubkey()).unwrap();
     Instruction::new_with_bytes(
         constants::accounts::PUMPFUN,
         &args.data(),
         vec![
             AccountMeta::new(mint.pubkey(), true),
-            AccountMeta::new(PumpFun::get_mint_authority_pda(), false),
+            AccountMeta::new(get_mint_authority_pda(), false),
             AccountMeta::new(bonding_curve, false),
             AccountMeta::new(
                 get_associated_token_address(&bonding_curve, &mint.pubkey()),
                 false,
             ),
-            AccountMeta::new_readonly(PumpFun::get_global_pda(), false),
+            AccountMeta::new_readonly(get_global_pda(), false),
             AccountMeta::new_readonly(constants::accounts::MPL_TOKEN_METADATA, false),
-            AccountMeta::new(PumpFun::get_metadata_pda(&mint.pubkey()), false),
+            AccountMeta::new(get_metadata_pda(&mint.pubkey()), false),
             AccountMeta::new(payer.pubkey(), true),
             AccountMeta::new_readonly(constants::accounts::SYSTEM_PROGRAM, false),
             AccountMeta::new_readonly(constants::accounts::TOKEN_PROGRAM, false),
@@ -142,12 +142,12 @@ pub fn buy(
     fee_recipient: &Pubkey,
     args: Buy,
 ) -> Instruction {
-    let bonding_curve: Pubkey = PumpFun::get_bonding_curve_pda(mint).unwrap();
+    let bonding_curve: Pubkey = get_bonding_curve_pda(mint).unwrap();
     Instruction::new_with_bytes(
         constants::accounts::PUMPFUN,
         &args.data(),
         vec![
-            AccountMeta::new_readonly(PumpFun::get_global_pda(), false),
+            AccountMeta::new_readonly(get_global_pda(), false),
             AccountMeta::new(*fee_recipient, false),
             AccountMeta::new_readonly(*mint, false),
             AccountMeta::new(bonding_curve, false),
@@ -185,12 +185,12 @@ pub fn sell(
     fee_recipient: &Pubkey,
     args: Sell,
 ) -> Instruction {
-    let bonding_curve: Pubkey = PumpFun::get_bonding_curve_pda(mint).unwrap();
+    let bonding_curve: Pubkey = get_bonding_curve_pda(mint).unwrap();
     Instruction::new_with_bytes(
         constants::accounts::PUMPFUN,
         &args.data(),
         vec![
-            AccountMeta::new_readonly(PumpFun::get_global_pda(), false),
+            AccountMeta::new_readonly(get_global_pda(), false),
             AccountMeta::new(*fee_recipient, false),
             AccountMeta::new_readonly(*mint, false),
             AccountMeta::new(bonding_curve, false),
