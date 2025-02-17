@@ -9,7 +9,7 @@ use spl_associated_token_account::{
 };
 use std::time::Instant;
 
-use crate::{constants::{self, trade::JITO_TIP_AMOUNT}, instruction};
+use crate::{constants::{self, trade::{DEFAULT_SLIPPAGE, JITO_TIP_AMOUNT}}, instruction};
 
 use super::common::{calculate_with_slippage_buy, get_bonding_curve_account, get_global_account, PriorityFee};
 
@@ -30,7 +30,7 @@ pub async fn build_buy_transaction(
     let buy_amount = bonding_curve_account
         .get_buy_price(amount_sol)
         .map_err(|e| anyhow!(e))?;
-    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(0));
+    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
 
     let mut instructions = Vec::new();
     if let Some(fee) = priority_fee {
@@ -90,7 +90,7 @@ pub async fn buy(
     let buy_amount = bonding_curve_account
         .get_buy_price(amount_sol)
         .map_err(|e| anyhow!(e))?;
-    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(0));
+    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
 
     let mut instructions = Vec::new();
     if let Some(fee) = priority_fee {
@@ -152,7 +152,7 @@ pub async fn buy_with_jito(
     let start_time = Instant::now();
 
     let global_account = get_global_account(rpc).await?;
-    let buy_amount_with_slippage = calculate_with_slippage_buy(max_sol_cost, slippage_basis_points.unwrap_or(0));
+    let buy_amount_with_slippage = calculate_with_slippage_buy(max_sol_cost, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
 
     let mut instructions = Vec::new();
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;

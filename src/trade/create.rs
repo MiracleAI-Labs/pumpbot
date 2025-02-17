@@ -8,7 +8,7 @@ use spl_associated_token_account::{
     instruction::create_associated_token_account,
 };
 
-use crate::{constants::{self, trade::DEFAULT_SLIPPAGE}, instruction, ipfs::TokenMetadataIPFS, jito::JitoClient};
+use crate::{constants, instruction, ipfs::TokenMetadataIPFS, jito::JitoClient};
 
 use super::{buy::build_buy_transaction, common::{create_priority_fee_instructions, get_buy_amount_with_slippage, get_global_account, PriorityFee}};
 
