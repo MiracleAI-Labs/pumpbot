@@ -26,7 +26,6 @@ use crate::trade::common::PriorityFee;
 
 pub struct PumpFun {
     pub rpc: RpcClient,
-    pub payer: Arc<Keypair>,
     pub jito_client: Option<JitoClient>,
 }
 
@@ -37,7 +36,6 @@ impl Clone for PumpFun {
                 self.rpc.url().to_string(),
                 self.rpc.commitment()
             ),
-            payer: self.payer.clone(),
             jito_client: self.jito_client.clone(),
         }
     }
@@ -48,7 +46,6 @@ impl PumpFun {
     pub fn new(
         rpc_url: String,
         commitment: Option<CommitmentConfig>,
-        payer: Arc<Keypair>,
         jito_url: Option<String>,
     ) -> Self {
         let rpc = RpcClient::new_with_commitment(
@@ -60,7 +57,6 @@ impl PumpFun {
 
         Self {
             rpc,
-            payer,
             jito_client,
         }
     }
@@ -68,13 +64,14 @@ impl PumpFun {
     /// Create a new token
     pub async fn create(
         &self,
+        payer: &Keypair,
         mint: &Keypair,
         ipfs: TokenMetadataIPFS,
         priority_fee: Option<PriorityFee>,
     ) -> Result<Signature, anyhow::Error> {
         trade::create::create(
             &self.rpc,
-            &self.payer,
+            payer,
             mint,
             ipfs,
             priority_fee,
@@ -83,6 +80,7 @@ impl PumpFun {
 
     pub async fn create_and_buy(
         &self,
+        payer: &Keypair,
         mint: &Keypair,
         ipfs: TokenMetadataIPFS,
         amount_sol: u64,
@@ -91,7 +89,7 @@ impl PumpFun {
     ) -> Result<Signature, anyhow::Error> {
         trade::create::create_and_buy(
             &self.rpc,
-            &self.payer,
+            payer,
             mint,
             ipfs,
             amount_sol,
@@ -119,6 +117,7 @@ impl PumpFun {
     /// Buy tokens
     pub async fn buy(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         amount_sol: u64,
         slippage_basis_points: Option<u64>,
@@ -126,7 +125,7 @@ impl PumpFun {
     ) -> Result<Signature, anyhow::Error> {
         trade::buy::buy(
             &self.rpc,
-            &self.payer,
+            payer,
             mint,
             amount_sol,
             slippage_basis_points,
@@ -137,6 +136,7 @@ impl PumpFun {
     /// Buy tokens using Jito
     pub async fn buy_with_jito(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         buy_token_amount: u64,
         max_sol_cost: u64,
@@ -145,7 +145,7 @@ impl PumpFun {
     ) -> Result<String, anyhow::Error> {
         trade::buy::buy_with_jito(
             &self.rpc,
-            &self.payer,
+            payer,
             self.jito_client.as_ref().unwrap(),
             mint,
             buy_token_amount,
@@ -158,6 +158,7 @@ impl PumpFun {
     /// Sell tokens
     pub async fn sell(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         amount_token: Option<u64>,
         slippage_basis_points: Option<u64>,
@@ -165,7 +166,7 @@ impl PumpFun {
     ) -> Result<(), anyhow::Error> {
         trade::sell::sell(
             &self.rpc,
-            &self.payer,
+            payer,
             mint,
             amount_token,
             slippage_basis_points,
@@ -176,6 +177,7 @@ impl PumpFun {
     /// Sell tokens by percentage
     pub async fn sell_by_percent(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         percent: u64,
         slippage_basis_points: Option<u64>,
@@ -183,7 +185,7 @@ impl PumpFun {
     ) -> Result<(), anyhow::Error> {
         trade::sell::sell_by_percent(
             &self.rpc,
-            &self.payer,
+            payer,
             mint,
             percent,
             slippage_basis_points,
@@ -193,6 +195,7 @@ impl PumpFun {
 
     pub async fn sell_by_percent_with_jito(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         percent: u64,
         slippage_basis_points: Option<u64>,
@@ -200,7 +203,7 @@ impl PumpFun {
     ) -> Result<String, anyhow::Error> {
         trade::sell::sell_by_percent_with_jito(
             &self.rpc,
-            &self.payer,
+            payer,
             self.jito_client.as_ref().unwrap(),
             mint,
             percent,
@@ -212,6 +215,7 @@ impl PumpFun {
     /// Sell tokens using Jito
     pub async fn sell_with_jito(
         &self,
+        payer: &Keypair,
         mint: &Pubkey,
         amount_token: Option<u64>,
         slippage_basis_points: Option<u64>,
@@ -222,7 +226,7 @@ impl PumpFun {
 
         trade::sell::sell_with_jito(
             &self.rpc,
-            &self.payer,
+            payer,
             jito_client,
             mint,
             amount_token,
@@ -261,12 +265,12 @@ impl PumpFun {
     }
 
     #[inline]
-    pub fn get_token_price(virtual_sol_reserves: u64, virtual_token_reserves: u64) -> f64 {
+    pub fn get_token_price(&self,virtual_sol_reserves: u64, virtual_token_reserves: u64) -> f64 {
         trade::common::get_token_price(virtual_sol_reserves, virtual_token_reserves)
     }
 
     #[inline]
-    pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> u64 {
+    pub fn get_buy_price(&self, amount: u64, trade_info: &TradeInfo) -> u64 {
         trade::common::get_buy_price(amount, trade_info)
     }
 
