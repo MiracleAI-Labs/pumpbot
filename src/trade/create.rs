@@ -106,7 +106,7 @@ pub async fn create_and_buy(
     let simulate_tx = Transaction::new_signed_with_payer(
         &instructions,
         Some(&payer.pubkey()),
-        &[payer],
+        &[payer, mint],
         recent_blockhash,
     );
 
