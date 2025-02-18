@@ -24,7 +24,7 @@ mai3-pumpfun-sdk = "2.4.5"
 
 ### logs subscription for token create and trade  transaction
 ```rust
-use mai3_pumpfun_sdk::common::{
+use pumpbot::common::{
     logs_events::DexEvent,
     logs_subscribe::{tokens_subscription, stop_subscription}
 };
@@ -80,7 +80,7 @@ use solana_sdk::{
     signer::Signer,
 };
 
-use mai3_pumpfun_sdk::{accounts::BondingCurveAccount, utils::CreateTokenMetadata, PriorityFee, PumpFun};
+use pumpbot::{accounts::BondingCurveAccount, utils::CreateTokenMetadata, PriorityFee, PumpFun};
 
 // Create a new PumpFun client
 let payer: Keypair = Keypair::new();
