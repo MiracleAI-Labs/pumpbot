@@ -1,12 +1,12 @@
 [package]
-name = "mai3-pumpfun-sdk"
+name = "pumpbot"
 version = "2.4.5"
 edition = "2021"
 authors = ["William <william@mai3.io>"]
 repository = "https://github.com/MiracleAI-Labs/pumpfun-sdk"
 description = "Rust SDK to interact with the Pump.fun Solana program."
 license = "MIT"
-keywords = ["solana", "memecoins", "pumpfun", "pumpfun-sdk"]
+keywords = ["solana", "memecoins", "pumpfun", "pumpfun-sdk", "pumpbot"]
 readme = "README.md"
 
 [lib]
