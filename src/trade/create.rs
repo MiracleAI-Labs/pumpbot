@@ -115,17 +115,17 @@ pub async fn create_and_buy_with_jito(
     payers: Vec<&Keypair>,
     mint: &Keypair,
     ipfs: TokenMetadataIPFS,
-    amount_sol: u64,
+    amount_sols: Vec<u64>,
 ) -> Result<(), anyhow::Error> {
-    if amount_sol == 0 {
+    if amount_sols.is_empty() {
         return Err(anyhow!("Amount cannot be zero"));
     }
 
     let mut transactions = Vec::new();
-    let transaction = build_create_and_buy_transaction(rpc, payers[0], mint, ipfs, amount_sol, None, None).await?;
+    let transaction = build_create_and_buy_transaction(rpc, payers[0], mint, ipfs, amount_sols[0], None, None).await?;
     transactions.push(transaction);
-    for payer in payers.iter().skip(1) {
-        let buy_transaction = build_buy_transaction(rpc, payer, &mint.pubkey(), amount_sol, None, None).await?;
+    for (i, payer) in payers.iter().skip(1).enumerate() {
+        let buy_transaction = build_buy_transaction(rpc, payer, &mint.pubkey(), amount_sols[i], None, None).await?;
         transactions.push(buy_transaction);
     }
 

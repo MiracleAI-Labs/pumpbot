@@ -3,6 +3,7 @@ pub mod constants;
 pub mod error;
 pub mod instruction;
 pub mod jito;
+pub mod grpc;
 pub mod common;
 pub mod ipfs;
 pub mod trade;
@@ -15,7 +16,7 @@ use solana_sdk::{
     signature::{Keypair, Signature},
 };
 
-use common::{logs_events::PumpfunEvent, logs_subscribe};
+use common::{logs_data::TradeInfo, logs_events::PumpfunEvent, logs_subscribe};
 use common::logs_subscribe::SubscriptionHandle;
 use ipfs::TokenMetadataIPFS;
 
@@ -99,6 +100,22 @@ impl PumpFun {
         ).await
     }
 
+    pub async fn create_and_buy_with_jito(
+        &self,
+        payers: Vec<&Keypair>,
+        mint: &Keypair,
+        ipfs: TokenMetadataIPFS,
+        amount_sols: Vec<u64>,
+    ) -> Result<(), anyhow::Error> { 
+        trade::create::create_and_buy_with_jito(
+            &self.jito_client.as_ref().unwrap(),
+            &self.rpc,
+            payers,
+            mint,
+            ipfs,
+            amount_sols,
+        ).await
+    }
     /// Buy tokens
     pub async fn buy(
         &self,
@@ -231,5 +248,30 @@ impl PumpFun {
     #[inline]
     pub async fn stop_subscription(&self, subscription_handle: SubscriptionHandle) {
         subscription_handle.shutdown().await;
+    }
+
+    #[inline]
+    pub async fn get_sol_balance(&self, payer: &Pubkey) -> Result<u64, anyhow::Error> {
+        trade::common::get_sol_balance(&self.rpc, payer)
+    }
+
+    #[inline]
+    pub async fn get_token_balance(&self, payer: &Pubkey, mint: &Pubkey) -> Result<u64, anyhow::Error> {
+        trade::common::get_token_balance(&self.rpc, payer, mint)
+    }
+
+    #[inline]
+    pub fn get_token_price(virtual_sol_reserves: u64, virtual_token_reserves: u64) -> f64 {
+        trade::common::get_token_price(virtual_sol_reserves, virtual_token_reserves)
+    }
+
+    #[inline]
+    pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> u64 {
+        trade::common::get_buy_price(amount, trade_info)
+    }
+
+    #[inline]
+    pub async fn transfer_sol(&self, payer: &Keypair, receive_wallet: &Pubkey, amount: u64) -> Result<(), anyhow::Error> {
+        trade::common::transfer_sol(&self.rpc, payer, receive_wallet, amount).await
     }
 }

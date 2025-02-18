@@ -177,9 +177,9 @@ pub fn get_token_price(virtual_sol_reserves: u64, virtual_token_reserves: u64) -
 }
 
 #[inline]
-pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> Result<u64, &'static str> {
+pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> u64 {
     if amount == 0 {
-        return Ok(0);
+        return 0;
     }
 
     let n: u128 = (trade_info.virtual_sol_reserves as u128) * (trade_info.virtual_token_reserves as u128);
@@ -188,7 +188,7 @@ pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> Result<u64, &'stati
     let s: u128 = (trade_info.virtual_token_reserves as u128) - r;
     let s_u64 = s as u64;
     
-    Ok(s_u64.min(trade_info.real_token_reserves))
+    s_u64.min(trade_info.real_token_reserves)
 }
 
 pub fn calculate_with_slippage_buy(amount: u64, basis_points: u64) -> u64 {
