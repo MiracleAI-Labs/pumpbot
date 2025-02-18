@@ -74,7 +74,6 @@ pub fn create_priority_fee_instructions(priority_fee: Option<PriorityFee>) -> Ve
     instructions
 }
 
-#[inline]
 pub fn get_token_balance(rpc: &RpcClient, account: &Pubkey, mint: &Pubkey) -> Result<u64, anyhow::Error> {
     let ata = get_associated_token_address(account, mint);
     if rpc.get_account(&ata).is_err() {
@@ -86,7 +85,6 @@ pub fn get_token_balance(rpc: &RpcClient, account: &Pubkey, mint: &Pubkey) -> Re
         .map_err(|_| anyhow!("Failed to parse token balance"))
 }
 
-#[inline]
 pub fn get_sol_balance(rpc: &RpcClient, account: &Pubkey) -> Result<u64, anyhow::Error> {
     rpc.get_balance(account).map_err(|_| anyhow!("Failed to get SOL balance"))
 }
@@ -169,14 +167,12 @@ pub fn get_buy_amount_with_slippage(amount_sol: u64, slippage_basis_points: Opti
     amount_sol + (amount_sol * slippage / 10000)
 }
 
-#[inline]
 pub fn get_token_price(virtual_sol_reserves: u64, virtual_token_reserves: u64) -> f64 {
     let v_sol = virtual_sol_reserves as f64 / 100_000_000.0;
     let v_tokens = virtual_token_reserves as f64 / 100_000.0;
     v_sol / v_tokens
 }
 
-#[inline]
 pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> u64 {
     if amount == 0 {
         return 0;
@@ -191,10 +187,12 @@ pub fn get_buy_price(amount: u64, trade_info: &TradeInfo) -> u64 {
     s_u64.min(trade_info.real_token_reserves)
 }
 
+#[inline]
 pub fn calculate_with_slippage_buy(amount: u64, basis_points: u64) -> u64 {
     amount + (amount * basis_points) / 10000
 }
 
+#[inline]
 pub fn calculate_with_slippage_sell(amount: u64, basis_points: u64) -> u64 {
     amount - (amount * basis_points) / 10000
 }
