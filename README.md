@@ -17,7 +17,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mai3-pumpfun-sdk = "2.4.5"
+pumpbot = "2.4.5"
 ```
 
 ## Usage
