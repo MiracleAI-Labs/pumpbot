@@ -124,10 +124,11 @@ pub async fn create_and_buy_with_jito(
     let mut transactions = Vec::new();
     let transaction = build_create_and_buy_transaction(rpc, payers[0], mint, ipfs, amount_sols[0], None, None).await?;
     transactions.push(transaction);
-    for (i, payer) in payers.iter().skip(1).enumerate() {
-        let buy_transaction = build_buy_transaction(rpc, payer, &mint.pubkey(), amount_sols[i], None, None).await?;
-        transactions.push(buy_transaction);
-    }
+    
+    // for (i, payer) in payers.iter().skip(1).enumerate() {
+    //     let buy_transaction = build_buy_transaction(rpc, payer, &mint.pubkey(), amount_sols[i], None, None).await?;
+    //     transactions.push(buy_transaction);
+    // }
 
     jito_client.send_transactions(&transactions).await?;
     
