@@ -98,20 +98,37 @@ impl PumpFun {
         ).await
     }
 
-    pub async fn create_and_buy_with_jito(
+    pub async fn create_and_buy_list_with_jito(
         &self,
         payers: Vec<&Keypair>,
         mint: &Keypair,
         ipfs: TokenMetadataIPFS,
         amount_sols: Vec<u64>,
     ) -> Result<(), anyhow::Error> { 
-        trade::create::create_and_buy_with_jito(
+        trade::create::create_and_buy_list_with_jito(
             &self.jito_client.as_ref().unwrap(),
             &self.rpc,
             payers,
             mint,
             ipfs,
             amount_sols,
+        ).await
+    }
+
+    pub async fn create_and_buy_with_jito(
+        &self,
+        payer: &Keypair,
+        mint: &Keypair,
+        ipfs: TokenMetadataIPFS,
+        amount_sol: u64,
+    ) -> Result<(), anyhow::Error> { 
+        trade::create::create_and_buy_with_jito(
+            &self.jito_client.as_ref().unwrap(),
+            &self.rpc,
+            payer,
+            mint,
+            ipfs,
+            amount_sol,
         ).await
     }
     /// Buy tokens

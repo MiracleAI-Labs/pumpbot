@@ -109,7 +109,7 @@ pub async fn create_and_buy(
     Ok(signature)
 }
 
-pub async fn create_and_buy_with_jito(
+pub async fn create_and_buy_list_with_jito(
     jito_client: &JitoClient,
     rpc: &RpcClient,
     payers: Vec<&Keypair>,
@@ -131,6 +131,24 @@ pub async fn create_and_buy_with_jito(
     }
 
     jito_client.send_transactions(&transactions).await?;
+    
+    Ok(())
+}
+
+pub async fn create_and_buy_with_jito(
+    jito_client: &JitoClient,
+    rpc: &RpcClient,
+    payer: &Keypair,
+    mint: &Keypair,
+    ipfs: TokenMetadataIPFS,
+    amount_sol: u64,
+) -> Result<(), anyhow::Error> {
+    if amount_sol == 0 {
+        return Err(anyhow!("Amount cannot be zero"));
+    }
+
+    let transaction = build_create_and_buy_transaction(rpc, payer, mint, ipfs, amount_sol, None, None).await?;
+    jito_client.send_transaction(&transaction).await?;
     
     Ok(())
 }
