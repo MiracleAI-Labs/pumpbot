@@ -179,12 +179,10 @@ pub async fn build_create_and_buy_instructions(
     let buy_amount_with_slippage =
         get_buy_amount_with_slippage(amount_sol, slippage_basis_points);
 
-    // let mut instructions = vec![
-    //     ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-    //     ComputeBudgetInstruction::set_compute_unit_price(0),
-    // ];
-
-    let mut instructions = vec![];
+    let mut instructions = vec![
+        ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
+        ComputeBudgetInstruction::set_compute_unit_price(0),
+    ];
 
     instructions.push(instruction::create(
         payer,
@@ -216,49 +214,49 @@ pub async fn build_create_and_buy_instructions(
         },
     ));
 
-    // let commitment_config = CommitmentConfig::confirmed();
-    // let recent_blockhash = rpc.get_latest_blockhash_with_commitment(commitment_config)?
-    //     .0;
+    let commitment_config = CommitmentConfig::confirmed();
+    let recent_blockhash = rpc.get_latest_blockhash_with_commitment(commitment_config)?
+        .0;
 
-    // let simulate_tx = Transaction::new_signed_with_payer(
-    //     &instructions,
-    //     Some(&payer.pubkey()),
-    //     &[payer, mint],
-    //     recent_blockhash,
-    // );
+    let simulate_tx = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer.pubkey()),
+        &[payer, mint],
+        recent_blockhash,
+    );
 
-    // let config = RpcSimulateTransactionConfig {
-    //     sig_verify: true,
-    //     commitment: Some(commitment_config),
-    //     ..RpcSimulateTransactionConfig::default()
-    // };
+    let config = RpcSimulateTransactionConfig {
+        sig_verify: true,
+        commitment: Some(commitment_config),
+        ..RpcSimulateTransactionConfig::default()
+    };
     
-    // let result = rpc.simulate_transaction_with_config(&simulate_tx, config)?
-    //     .value;
+    let result = rpc.simulate_transaction_with_config(&simulate_tx, config)?
+        .value;
 
-    // if result.logs.as_ref().map_or(true, |logs| logs.is_empty()) {
-    //     return Err(anyhow!("Simulation failed: {:?}", result.err));
-    // }
+    if result.logs.as_ref().map_or(true, |logs| logs.is_empty()) {
+        return Err(anyhow!("Simulation failed: {:?}", result.err));
+    }
 
-    // let result_cu = result.units_consumed.ok_or_else(|| anyhow!("No compute units consumed"))?;
-    // let fees = rpc.get_recent_prioritization_fees(&[])?;
-    // let average_fees = if fees.is_empty() {
-    //     DEFAULT_COMPUTE_UNIT_PRICE
-    // } else {
-    //     fees.iter()
-    //         .map(|fee| fee.prioritization_fee)
-    //         .sum::<u64>() / fees.len() as u64
-    // };
+    let result_cu = result.units_consumed.ok_or_else(|| anyhow!("No compute units consumed"))?;
+    let fees = rpc.get_recent_prioritization_fees(&[])?;
+    let average_fees = if fees.is_empty() {
+        DEFAULT_COMPUTE_UNIT_PRICE
+    } else {
+        fees.iter()
+            .map(|fee| fee.prioritization_fee)
+            .sum::<u64>() / fees.len() as u64
+    };
 
-    // let unit_price = match priority_fee {
-    //     None => average_fees,
-    //     Some(pf) => pf.price.unwrap_or(DEFAULT_COMPUTE_UNIT_PRICE)
-    // };
+    let unit_price = match priority_fee {
+        None => average_fees,
+        Some(pf) => pf.price.unwrap_or(DEFAULT_COMPUTE_UNIT_PRICE)
+    };
 
-    // let unit_price = if unit_price == 0 { DEFAULT_COMPUTE_UNIT_PRICE } else { unit_price };
+    let unit_price = if unit_price == 0 { DEFAULT_COMPUTE_UNIT_PRICE } else { unit_price };
 
-    // instructions[0] = ComputeBudgetInstruction::set_compute_unit_limit(result_cu as u32);
-    // instructions[1] = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
+    instructions[0] = ComputeBudgetInstruction::set_compute_unit_limit(result_cu as u32);
+    instructions[1] = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
 
     Ok(instructions)
 }
@@ -273,7 +271,45 @@ pub async fn build_create_and_buy_instructions_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Vec<Instruction>, anyhow::Error> {
-    let mut instructions = build_create_and_buy_instructions(rpc, payer, mint, ipfs, amount_sol, slippage_basis_points, None).await?;
+    if amount_sol == 0 {
+        return Err(anyhow!("Amount cannot be zero"));
+    }
+
+    let global_account = get_global_account(rpc).await?;
+    let buy_amount = global_account.get_initial_buy_price(amount_sol);
+    let buy_amount_with_slippage =
+        get_buy_amount_with_slippage(amount_sol, slippage_basis_points);
+
+    let mut instructions = vec![];
+    instructions.push(instruction::create(
+        payer,
+        mint,
+        instruction::Create {
+            _name: ipfs.metadata.name,
+            _symbol: ipfs.metadata.symbol,
+            _uri: ipfs.metadata_uri,
+        },
+    ));
+
+    let ata = get_associated_token_address(&payer.pubkey(), &mint.pubkey());
+    if rpc.get_account(&ata).is_err() {
+        instructions.push(create_associated_token_account(
+            &payer.pubkey(),
+            &payer.pubkey(),
+            &mint.pubkey(),
+            &constants::accounts::TOKEN_PROGRAM,
+        ));
+    }
+
+    instructions.push(instruction::buy(
+        payer,
+        &mint.pubkey(),
+        &global_account.fee_recipient,
+        instruction::Buy {
+            _amount: buy_amount,
+            _max_sol_cost: buy_amount_with_slippage,
+        },
+    ));
 
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);

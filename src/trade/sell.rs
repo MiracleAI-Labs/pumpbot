@@ -241,7 +241,41 @@ pub async fn build_sell_instructions_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Vec<Instruction>, anyhow::Error> {
-    let mut instructions = build_sell_instructions(rpc, payer, mint, amount_token, slippage_basis_points, None).await?;
+    let (balance_u64, ata) = get_token_balance(rpc, payer, mint).await?;
+    let amount = amount_token.unwrap_or(balance_u64);
+    
+    if amount == 0 {
+        return Err(anyhow!("Amount cannot be zero"));
+    }
+    
+    let global_account = get_global_account(rpc).await?;
+    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
+    let min_sol_output = bonding_curve_account
+        .get_sell_price(amount, global_account.fee_basis_points)
+        .map_err(|e| anyhow!(e))?;
+    let min_sol_output_with_slippage = calculate_with_slippage_sell(
+        min_sol_output,
+        slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE),
+    );
+
+    let mut instructions = vec![];
+    instructions.push(instruction::sell(
+        payer,
+        mint,
+        &global_account.fee_recipient,
+        instruction::Sell {
+            _amount: amount,
+            _min_sol_output: min_sol_output_with_slippage,
+        },
+    ));
+
+    instructions.push(close_account(
+        &spl_token::ID,
+        &ata,
+        &payer.pubkey(),
+        &payer.pubkey(),
+        &[&payer.pubkey()],
+    )?);
 
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);

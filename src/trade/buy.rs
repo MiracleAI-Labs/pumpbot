@@ -194,7 +194,33 @@ pub async fn build_buy_instructions_with_jito(
         return Err(anyhow!("Amount cannot be zero"));
     }
 
-    let mut instructions = build_buy_instructions(rpc, payer, mint, amount_sol, slippage_basis_points, None).await?;
+    let global_account = get_global_account(rpc).await?;
+    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
+    let buy_amount = bonding_curve_account
+        .get_buy_price(amount_sol)
+        .map_err(|e| anyhow!(e))?;
+    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
+
+    let mut instructions = vec![];
+    let ata = get_associated_token_address(&payer.pubkey(), mint);
+    if rpc.get_account(&ata).is_err() {
+        instructions.push(create_associated_token_account(
+            &payer.pubkey(),
+            &payer.pubkey(),
+            mint,
+            &constants::accounts::TOKEN_PROGRAM,
+        ));
+    }
+
+    instructions.push(instruction::buy(
+        payer,
+        mint,
+        &global_account.fee_recipient,
+        instruction::Buy {
+            _amount: buy_amount,
+            _max_sol_cost: buy_amount_with_slippage,
+        },
+    ));
 
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
