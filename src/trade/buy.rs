@@ -194,7 +194,7 @@ pub async fn build_buy_instructions_with_jito(
     }
 
     let global_account = get_global_account(rpc).await?;
-    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
+    // let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
     // let buy_amount = bonding_curve_account
     //     .get_buy_price(amount_sol)
     //     .map_err(|e| anyhow!(e))?;
