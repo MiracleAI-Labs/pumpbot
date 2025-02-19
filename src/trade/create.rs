@@ -85,6 +85,7 @@ pub async fn create_and_buy_list_with_jito(
     transactions.push(transaction);
     
     for (i, payer) in payers.iter().skip(1).enumerate() {
+        println!("Creating and buying token index: {}", i);
         let buy_transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, &mint.pubkey(), amount_sols[i], slippage_basis_points, jito_fee).await?;
         transactions.push(buy_transaction);
     }

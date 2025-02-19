@@ -134,6 +134,12 @@ pub async fn get_global_account(rpc: &RpcClient) -> Result<Arc<accounts::GlobalA
 }
 
 #[inline]
+pub async fn get_initial_buy_price(global_account: &Arc<accounts::GlobalAccount>, amount_sol: u64) -> Result<u64, anyhow::Error> {
+    let buy_amount = global_account.get_initial_buy_price(amount_sol);
+    Ok(buy_amount)
+}
+
+#[inline]
 pub async fn get_bonding_curve_account(
     rpc: &RpcClient,
     mint: &Pubkey,
@@ -141,6 +147,10 @@ pub async fn get_bonding_curve_account(
     let bonding_curve_pda = get_bonding_curve_pda(mint)
         .ok_or(anyhow!("Bonding curve not found"))?;
     
+    if rpc.get_account(&bonding_curve_pda).is_err() {
+        return Err(anyhow!("Bonding curve not found"));
+    }
+
     let account = rpc.get_account(&bonding_curve_pda)?;
     let bonding_curve = Arc::new(accounts::BondingCurveAccount::try_from_slice(&account.data)?);
     Ok(bonding_curve)

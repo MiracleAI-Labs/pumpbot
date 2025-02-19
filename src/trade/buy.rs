@@ -11,7 +11,7 @@ use std::time::Instant;
 
 use crate::{constants::{self, trade::{DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPAGE, JITO_TIP_AMOUNT}}, instruction, jito::JitoClient};
 
-use super::common::{calculate_with_slippage_buy, get_bonding_curve_account, get_global_account, PriorityFee};
+use super::common::{calculate_with_slippage_buy, get_bonding_curve_account, get_global_account, get_initial_buy_price, PriorityFee};
 
 pub async fn buy(
     rpc: &RpcClient,
@@ -218,12 +218,16 @@ pub async fn build_buy_instructions_with_jito(
     }
 
     let global_account = get_global_account(rpc).await?;
-    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
-    let buy_amount = bonding_curve_account
-        .get_buy_price(amount_sol)
-        .map_err(|e| anyhow!(e))?;
-    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
+    let buy_amount = match get_bonding_curve_account(rpc, mint).await {
+        Ok(account) => account.get_buy_price(amount_sol).map_err(|e| anyhow!(e))?,
+        Err(_e) => {
+            let initial_buy_amount = get_initial_buy_price(&global_account, amount_sol).await?;
+            initial_buy_amount / 2
+        }
+    };
     
+    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
+
     let mut instructions = vec![];
     let ata = get_associated_token_address(&payer.pubkey(), mint);
     if rpc.get_account(&ata).is_err() {
