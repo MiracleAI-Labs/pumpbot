@@ -9,7 +9,7 @@ use base64::{Engine as _, engine::general_purpose};
 use serde::{Deserialize, Serialize};
 
 /// Metadata structure for a token, matching the format expected by Pump.fun.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenMetadata {
     /// Name of the token
@@ -33,7 +33,7 @@ pub struct TokenMetadata {
 }
 
 /// Response received after successfully uploading token metadata.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenMetadataIPFS {
     /// The uploaded token metadata

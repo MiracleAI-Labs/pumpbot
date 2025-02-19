@@ -20,7 +20,6 @@ use common::{logs_data::TradeInfo, logs_events::PumpfunEvent, logs_subscribe};
 use common::logs_subscribe::SubscriptionHandle;
 use ipfs::TokenMetadataIPFS;
 
-use std::sync::Arc;
 use crate::jito::JitoClient;
 use crate::trade::common::PriorityFee;
 
@@ -104,14 +103,18 @@ impl PumpFun {
         mint: &Keypair,
         ipfs: TokenMetadataIPFS,
         amount_sols: Vec<u64>,
+        slippage_basis_points: Option<u64>,
+        jito_fee: Option<f64>,
     ) -> Result<(), anyhow::Error> { 
         trade::create::create_and_buy_list_with_jito(
-            &self.jito_client.as_ref().unwrap(),
             &self.rpc,
+            &self.jito_client.as_ref().unwrap(),
             payers,
             mint,
             ipfs,
             amount_sols,
+            slippage_basis_points,
+            jito_fee,
         ).await
     }
 
@@ -121,14 +124,18 @@ impl PumpFun {
         mint: &Keypair,
         ipfs: TokenMetadataIPFS,
         amount_sol: u64,
+        slippage_basis_points: Option<u64>,
+        jito_fee: Option<f64>,
     ) -> Result<(), anyhow::Error> { 
         trade::create::create_and_buy_with_jito(
-            &self.jito_client.as_ref().unwrap(),
             &self.rpc,
+            &self.jito_client.as_ref().unwrap(),
             payer,
             mint,
             ipfs,
             amount_sol,
+            slippage_basis_points,
+            jito_fee,
         ).await
     }
     /// Buy tokens
@@ -161,8 +168,8 @@ impl PumpFun {
     ) -> Result<String, anyhow::Error> {
         trade::buy::buy_with_jito(
             &self.rpc,
+            &self.jito_client.as_ref().unwrap(),
             payer,
-            self.jito_client.as_ref().unwrap(),
             mint,
             amount_sol,
             slippage_basis_points,

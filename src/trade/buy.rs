@@ -230,8 +230,8 @@ pub async fn buy(
 /// Buy tokens using Jito
 pub async fn buy_with_jito(
     rpc: &RpcClient,
-    payer: &Keypair,
     jito_client: &JitoClient,
+    payer: &Keypair,
     mint: &Pubkey,
     amount_sol: u64,
     slippage_basis_points: Option<u64>,
