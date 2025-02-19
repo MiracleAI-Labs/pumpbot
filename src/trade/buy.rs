@@ -46,6 +46,30 @@ pub async fn buy_with_jito(
     Ok(signature)
 }
 
+pub async fn buy_list_with_jito(
+    rpc: &RpcClient,
+    jito_client: &JitoClient,
+    payers: Vec<&Keypair>,
+    mint: &Pubkey,
+    amount_sols: Vec<u64>,
+    slippage_basis_points: Option<u64>,
+    jito_fee: Option<f64>,
+) -> Result<String, anyhow::Error> {
+    let start_time = Instant::now();
+
+    let mut transactions = vec![];
+    for (i, payer) in payers.iter().enumerate() {
+        let transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, mint, amount_sols[i], slippage_basis_points, jito_fee).await?;
+        transactions.push(transaction);
+    }
+    
+    let signature = jito_client.send_transactions(&transactions).await?;
+
+    println!("Total Jito buy operation time: {:?}ms", start_time.elapsed().as_millis());
+
+    Ok(signature)
+}
+
 pub async fn build_buy_transaction(
     rpc: &RpcClient,
     payer: &Keypair,

@@ -177,6 +177,25 @@ impl PumpFun {
         ).await
     }
 
+    pub async fn buy_list_with_jito(
+        &self,
+        payers: Vec<&Keypair>,
+        mint: &Pubkey,
+        amount_sols: Vec<u64>,
+        slippage_basis_points: Option<u64>,
+        jito_fee: Option<f64>,
+    ) -> Result<String, anyhow::Error> {
+        trade::buy::buy_list_with_jito(
+            &self.rpc,
+            &self.jito_client.as_ref().unwrap(),
+            payers,
+            mint,
+            amount_sols,
+            slippage_basis_points,
+            jito_fee,
+        ).await
+    }
+
     /// Sell tokens
     pub async fn sell(
         &self,
