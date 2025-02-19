@@ -36,12 +36,9 @@ pub async fn buy_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<String, anyhow::Error> {
-    println!("buy_with_jito 1111111111");
     let start_time = Instant::now();
 
-    println!("buy_with_jito 2222222222");
     let transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
-    println!("buy_with_jito 3333333333");
     let signature = jito_client.send_transaction(&transaction).await?;
 
     println!("Total Jito buy operation time: {:?}ms", start_time.elapsed().as_millis());
@@ -79,9 +76,7 @@ pub async fn build_buy_transaction_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Transaction, anyhow::Error> {
-    println!("build_buy_transaction_with_jito 4444444444");
     let instructions = build_buy_instructions_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
-    println!("build_buy_transaction_with_jito 5555555555");
     let recent_blockhash = rpc.get_latest_blockhash()?;
     let transaction = Transaction::new_signed_with_payer(
         &instructions,
@@ -194,25 +189,17 @@ pub async fn build_buy_instructions_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Vec<Instruction>, anyhow::Error> {
-    println!("build_buy_instructions_with_jito 6666666666");
     if amount_sol == 0 {
-        println!("build_buy_instructions_with_jito 7777777777");
         return Err(anyhow!("Amount cannot be zero"));
     }
-    println!("build_buy_instructions_with_jito 8888888888");
 
-    println!("build_buy_instructions_with_jito");
     let global_account = get_global_account(rpc).await?;
-    println!("build_buy_instructions_with_jito 9999999999");
     let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
-    println!("build_buy_instructions_with_jito 1010101010");
     let buy_amount = bonding_curve_account
         .get_buy_price(amount_sol)
         .map_err(|e| anyhow!(e))?;
-    println!("build_buy_instructions_with_jito 1111111111");
     let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
-    println!("build_buy_instructions_with_jito 1212121212");
-    println!("build_buy_instructions_with_jito 2");
+    
     let mut instructions = vec![];
     let ata = get_associated_token_address(&payer.pubkey(), mint);
     println!("user ata: {}", ata);
@@ -225,7 +212,6 @@ pub async fn build_buy_instructions_with_jito(
         ));
     }
 
-    println!("build_buy_instructions_with_jito 3");
     instructions.push(instruction::buy(
         payer,
         mint,
@@ -236,10 +222,7 @@ pub async fn build_buy_instructions_with_jito(
         },
     ));
 
-    println!("get_tip_account before 1111111111");
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
-    println!("get_tip_account after 2222222222");
-    println!("get_tip_accounts: {}", tip_account);
 
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
     instructions.push(
