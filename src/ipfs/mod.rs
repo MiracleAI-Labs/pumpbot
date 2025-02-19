@@ -63,8 +63,12 @@ pub struct CreateTokenMetadata {
 
 pub async fn create_token_metadata(metadata: CreateTokenMetadata, api_key: &str) -> Result<TokenMetadataIPFS, anyhow::Error> {
     println!("create_token_metadata: {:?}", metadata);
-    let base64_string = file_to_base64(&metadata.file).await?;
-    let ipfs_url = upload_base64_file(&base64_string, api_key).await?;
+    let ipfs_url = if metadata.file.starts_with("http") {
+        metadata.file
+    } else {
+        let base64_string = file_to_base64(&metadata.file).await?;
+        upload_base64_file(&base64_string, api_key).await?
+    };
 
     let token_metadata = TokenMetadata {
         name: metadata.name,
