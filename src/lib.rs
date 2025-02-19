@@ -166,6 +166,7 @@ impl PumpFun {
         slippage_basis_points: Option<u64>,
         jito_fee: Option<f64>,
     ) -> Result<String, anyhow::Error> {
+        println!("buy_with_jito 1111111111");
         trade::buy::buy_with_jito(
             &self.rpc,
             &self.jito_client.as_ref().unwrap(),

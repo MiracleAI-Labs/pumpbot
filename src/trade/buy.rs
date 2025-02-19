@@ -36,9 +36,12 @@ pub async fn buy_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<String, anyhow::Error> {
+    println!("buy_with_jito 1111111111");
     let start_time = Instant::now();
 
+    println!("buy_with_jito 2222222222");
     let transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
+    println!("buy_with_jito 3333333333");
     let signature = jito_client.send_transaction(&transaction).await?;
 
     println!("Total Jito buy operation time: {:?}ms", start_time.elapsed().as_millis());
@@ -76,8 +79,9 @@ pub async fn build_buy_transaction_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Transaction, anyhow::Error> {
+    println!("build_buy_transaction_with_jito 4444444444");
     let instructions = build_buy_instructions_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
-
+    println!("build_buy_transaction_with_jito 5555555555");
     let recent_blockhash = rpc.get_latest_blockhash()?;
     let transaction = Transaction::new_signed_with_payer(
         &instructions,
@@ -190,9 +194,12 @@ pub async fn build_buy_instructions_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<Vec<Instruction>, anyhow::Error> {
+    println!("build_buy_instructions_with_jito 6666666666");
     if amount_sol == 0 {
+        println!("build_buy_instructions_with_jito 7777777777");
         return Err(anyhow!("Amount cannot be zero"));
     }
+    println!("build_buy_instructions_with_jito 8888888888");
 
     println!("build_buy_instructions_with_jito");
     let global_account = get_global_account(rpc).await?;
