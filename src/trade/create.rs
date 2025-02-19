@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use anyhow::anyhow;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_sdk::{
@@ -8,7 +10,7 @@ use spl_associated_token_account::{
     instruction::create_associated_token_account,
 };
 
-use crate::{constants::{self, trade::{DEFAULT_COMPUTE_UNIT_PRICE, JITO_TIP_AMOUNT}}, instruction, ipfs::TokenMetadataIPFS, jito::JitoClient};
+use crate::{constants::{self, trade::{DEFAULT_COMPUTE_UNIT_PRICE, JITO_TIP_AMOUNT}}, instruction, ipfs::TokenMetadataIPFS, jito::JitoClient, trade::buy::build_buy_transaction_with_jito};
 
 use super::common::{create_priority_fee_instructions, get_buy_amount_with_slippage, get_global_account, PriorityFee};
 
@@ -75,17 +77,21 @@ pub async fn create_and_buy_list_with_jito(
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
 ) -> Result<(), anyhow::Error> {
-  
+    
+    let start_time = Instant::now();
+
     let mut transactions = Vec::new();
-    let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payers[0], mint, ipfs.clone(), amount_sols[0], slippage_basis_points, jito_fee).await?;
+    let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payers[0], mint, ipfs, amount_sols[0], slippage_basis_points, jito_fee).await?;
     transactions.push(transaction);
     
     for (i, payer) in payers.iter().skip(1).enumerate() {
-        let buy_transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payer, &mint, ipfs.clone(), amount_sols[i], slippage_basis_points, jito_fee).await?;
+        let buy_transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, &mint.pubkey(), amount_sols[i], slippage_basis_points, jito_fee).await?;
         transactions.push(buy_transaction);
     }
 
     jito_client.send_transactions(&transactions).await?;
+
+    println!("Total Jito create and buy operation time: {:?}ms", start_time.elapsed().as_millis());
     
     Ok(())
 }

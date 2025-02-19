@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_sdk::{
-    commitment_config::CommitmentConfig, compute_budget::ComputeBudgetInstruction, native_token::sol_to_lamports, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, system_instruction, transaction::Transaction
+    commitment_config::CommitmentConfig, compute_budget::ComputeBudgetInstruction, instruction::Instruction, native_token::sol_to_lamports, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, system_instruction, transaction::Transaction
 };
 use spl_associated_token_account::{
     get_associated_token_address,
@@ -13,6 +13,39 @@ use crate::{constants::{self, trade::{DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPA
 
 use super::common::{calculate_with_slippage_buy, get_bonding_curve_account, get_global_account, PriorityFee};
 
+pub async fn buy(
+    rpc: &RpcClient,
+    payer: &Keypair,
+    mint: &Pubkey,
+    amount_sol: u64,
+    slippage_basis_points: Option<u64>,
+    priority_fee: Option<PriorityFee>,
+) -> Result<Signature, anyhow::Error> {
+    let transaction = build_buy_transaction(rpc, payer, mint, amount_sol, slippage_basis_points, priority_fee).await?;
+    let signature = rpc.send_transaction(&transaction)?;
+    Ok(signature)
+}
+
+/// Buy tokens using Jito
+pub async fn buy_with_jito(
+    rpc: &RpcClient,
+    jito_client: &JitoClient,
+    payer: &Keypair,
+    mint: &Pubkey,
+    amount_sol: u64,
+    slippage_basis_points: Option<u64>,
+    jito_fee: Option<f64>,
+) -> Result<String, anyhow::Error> {
+    let start_time = Instant::now();
+
+    let transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
+    let signature = jito_client.send_transaction(&transaction).await?;
+
+    println!("Total Jito buy operation time: {:?}ms", start_time.elapsed().as_millis());
+
+    Ok(signature)
+}
+
 pub async fn build_buy_transaction(
     rpc: &RpcClient,
     payer: &Keypair,
@@ -21,6 +54,49 @@ pub async fn build_buy_transaction(
     slippage_basis_points: Option<u64>,
     priority_fee: Option<PriorityFee>,
 ) -> Result<Transaction, anyhow::Error> {
+    let instructions = build_buy_instructions(rpc, payer, mint, amount_sol, slippage_basis_points, priority_fee).await?;
+
+    let recent_blockhash = rpc.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer.pubkey()),
+        &[payer],
+        recent_blockhash,
+    );
+
+    Ok(transaction)
+}
+
+pub async fn build_buy_transaction_with_jito(
+    rpc: &RpcClient,
+    jito_client: &JitoClient,
+    payer: &Keypair,
+    mint: &Pubkey,
+    amount_sol: u64,
+    slippage_basis_points: Option<u64>,
+    jito_fee: Option<f64>,
+) -> Result<Transaction, anyhow::Error> {
+    let instructions = build_buy_instructions_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
+
+    let recent_blockhash = rpc.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer.pubkey()),
+        &[payer],
+        recent_blockhash,
+    );
+
+    Ok(transaction)
+}
+
+pub async fn build_buy_instructions(
+    rpc: &RpcClient,
+    payer: &Keypair,
+    mint: &Pubkey,
+    amount_sol: u64,
+    slippage_basis_points: Option<u64>,
+    priority_fee: Option<PriorityFee>,
+) -> Result<Vec<Instruction>, anyhow::Error> {
     if amount_sol == 0 {
         return Err(anyhow!("Amount cannot be zero"));
     }
@@ -101,17 +177,11 @@ pub async fn build_buy_transaction(
     instructions[0] = ComputeBudgetInstruction::set_compute_unit_limit(result_cu as u32);
     instructions[1] = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer.pubkey()),
-        &[payer],
-        recent_blockhash,
-    );
+    Ok(instructions)
 
-    Ok(transaction)
 }
 
-pub async fn build_buy_transaction_with_jito(
+pub async fn build_buy_instructions_with_jito(
     rpc: &RpcClient,
     jito_client: &JitoClient,
     payer: &Keypair,
@@ -119,80 +189,12 @@ pub async fn build_buy_transaction_with_jito(
     amount_sol: u64,
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
-) -> Result<Transaction, anyhow::Error> {
+) -> Result<Vec<Instruction>, anyhow::Error> {
     if amount_sol == 0 {
         return Err(anyhow!("Amount cannot be zero"));
     }
 
-    let global_account = get_global_account(rpc).await?;
-    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
-    let buy_amount = bonding_curve_account
-        .get_buy_price(amount_sol)
-        .map_err(|e| anyhow!(e))?;
-    let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
-
-    let mut instructions = vec![
-        ComputeBudgetInstruction::set_compute_unit_limit(1_400_000),
-        ComputeBudgetInstruction::set_compute_unit_price(0),
-    ];
-
-    let ata = get_associated_token_address(&payer.pubkey(), mint);
-    if rpc.get_account(&ata).is_err() {
-        instructions.push(create_associated_token_account(
-            &payer.pubkey(),
-            &payer.pubkey(),
-            mint,
-            &constants::accounts::TOKEN_PROGRAM,
-        ));
-    }
-
-    instructions.push(instruction::buy(
-        payer,
-        mint,
-        &global_account.fee_recipient,
-        instruction::Buy {
-            _amount: buy_amount,
-            _max_sol_cost: buy_amount_with_slippage,
-        },
-    ));
-
-    let commitment_config = CommitmentConfig::confirmed();
-    let recent_blockhash = rpc.get_latest_blockhash_with_commitment(commitment_config)?
-        .0;
-
-    let simulate_tx = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer.pubkey()),
-        &[payer],
-        recent_blockhash,
-    );
-
-    let config = RpcSimulateTransactionConfig {
-        sig_verify: true,
-        commitment: Some(commitment_config),
-        ..RpcSimulateTransactionConfig::default()
-    };
-    
-    let result = rpc.simulate_transaction_with_config(&simulate_tx, config)?
-        .value;
-
-    if result.logs.as_ref().map_or(true, |logs| logs.is_empty()) {
-        return Err(anyhow!("Simulation failed: {:?}", result.err));
-    }
-
-    let result_cu = result.units_consumed.ok_or_else(|| anyhow!("No compute units consumed"))?;
-    let fees = rpc.get_recent_prioritization_fees(&[])?;
-    let average_fees = if fees.is_empty() {
-        DEFAULT_COMPUTE_UNIT_PRICE
-    } else {
-        fees.iter()
-            .map(|fee| fee.prioritization_fee)
-            .sum::<u64>() / fees.len() as u64
-    };
-
-    let unit_price = if average_fees == 0 { DEFAULT_COMPUTE_UNIT_PRICE } else { average_fees };
-    instructions[0] = ComputeBudgetInstruction::set_compute_unit_limit(result_cu as u32);
-    instructions[1] = ComputeBudgetInstruction::set_compute_unit_price(unit_price);
+    let mut instructions = build_buy_instructions(rpc, payer, mint, amount_sol, slippage_basis_points, None).await?;
 
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
@@ -204,45 +206,5 @@ pub async fn build_buy_transaction_with_jito(
         ),
     );
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer.pubkey()),
-        &[payer],
-        recent_blockhash,
-    );
-
-    Ok(transaction)
-}
-
-pub async fn buy(
-    rpc: &RpcClient,
-    payer: &Keypair,
-    mint: &Pubkey,
-    amount_sol: u64,
-    slippage_basis_points: Option<u64>,
-    priority_fee: Option<PriorityFee>,
-) -> Result<Signature, anyhow::Error> {
-    let transaction = build_buy_transaction(rpc, payer, mint, amount_sol, slippage_basis_points, priority_fee).await?;
-    let signature = rpc.send_transaction(&transaction)?;
-    Ok(signature)
-}
-
-/// Buy tokens using Jito
-pub async fn buy_with_jito(
-    rpc: &RpcClient,
-    jito_client: &JitoClient,
-    payer: &Keypair,
-    mint: &Pubkey,
-    amount_sol: u64,
-    slippage_basis_points: Option<u64>,
-    jito_fee: Option<f64>,
-) -> Result<String, anyhow::Error> {
-    let start_time = Instant::now();
-
-    let transaction = build_buy_transaction_with_jito(rpc, jito_client, payer, mint, amount_sol, slippage_basis_points, jito_fee).await?;
-    let signature = jito_client.send_transaction(&transaction).await?;
-
-    println!("Total Jito buy operation time: {:?}ms", start_time.elapsed().as_millis());
-
-    Ok(signature)
+    Ok(instructions)
 }
