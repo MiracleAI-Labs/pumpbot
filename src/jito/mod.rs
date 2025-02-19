@@ -50,17 +50,25 @@ impl JitoClient {
     }
 
     pub async fn init_tip_accounts(&self) -> Result<()> {
+        println!("init_tip_accounts");
         let accounts = self.get_tip_accounts().await?;
+        println!("accounts: {:?}", accounts);
         let mut tip_accounts = self.tip_accounts.write().await;
+        println!("tip_accounts before: {:?}", tip_accounts);
         *tip_accounts = accounts.accounts.iter().map(|a| a.to_string()).collect();
+        println!("tip_accounts after: {:?}", tip_accounts);
         Ok(())
     }
 
     pub async fn get_tip_account(&self) -> Result<Pubkey> {
         {
+            println!("get_tip_account");
             let accounts = self.tip_accounts.read().await;
+            println!("accounts: {:?}", accounts);
             if !accounts.is_empty() {
-                if let Some(acc) = accounts.iter().choose(&mut rand::thread_rng()) {
+                println!("accounts is not empty");
+                if let Some(acc) = accounts.iter().choose(&mut rand::rng()) {
+                    println!("acc: {:?}", acc);
                     return Pubkey::from_str(acc)
                         .map_err(|err| {
                             error!("jito: failed to parse Pubkey: {:?}", err);
@@ -70,9 +78,12 @@ impl JitoClient {
             }
         }
 
+        println!("init_tip_accounts");
         self.init_tip_accounts().await?;
+        println!("init_tip_accounts done");
 
         let accounts = self.tip_accounts.read().await;
+        println!("accounts: {:?}", accounts);
         accounts
             .iter()
             .choose(&mut rand::rng())
