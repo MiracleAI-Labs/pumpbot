@@ -107,9 +107,13 @@ pub async fn create_and_buy_with_jito(
     jito_fee: Option<f64>,
 ) -> Result<(), anyhow::Error> {
 
+    let start_time = Instant::now();
+    
     let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payer, mint, ipfs, amount_sol, slippage_basis_points, jito_fee).await?;
 
     jito_client.send_transaction(&transaction).await?;
+
+    println!("Total Jito create and buy operation time: {:?}ms", start_time.elapsed().as_millis());
 
     Ok(())
 }
