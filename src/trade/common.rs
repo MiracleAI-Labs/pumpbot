@@ -1,23 +1,12 @@
 use anyhow::anyhow;
+use std::sync::Arc;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction, instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction, transaction::Transaction
 };
 use spl_associated_token_account::get_associated_token_address;
-
-use std::time::Duration;
-use std::{sync::Arc, thread::sleep};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-
 use crate::{accounts, common::logs_data::TradeInfo, constants::{self, trade::{DEFAULT_COMPUTE_UNIT_LIMIT, DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPAGE}}};
-
 use borsh::BorshDeserialize;
-
-lazy_static::lazy_static! {
-    static ref ACCOUNT_CACHE: RwLock<HashMap<Pubkey, Arc<accounts::GlobalAccount>>> = RwLock::new(HashMap::new());
-    static ref BONDING_CURVE_CACHE: RwLock<HashMap<Pubkey, Arc<accounts::BondingCurveAccount>>> = RwLock::new(HashMap::new());
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PriorityFee {
@@ -137,15 +126,9 @@ pub fn get_metadata_pda(mint: &Pubkey) -> Pubkey {
 #[inline]
 pub async fn get_global_account(rpc: &RpcClient) -> Result<Arc<accounts::GlobalAccount>, anyhow::Error> {
     let global = get_global_pda();
-    
-    if let Some(account) = ACCOUNT_CACHE.read().await.get(&global) {
-        return Ok(account.clone());
-    }
 
     let account = rpc.get_account(&global)?;
-    let global_account = Arc::new(accounts::GlobalAccount::try_from_slice(&account.data)?);
-    
-    ACCOUNT_CACHE.write().await.insert(global, global_account.clone());
+    let global_account = Arc::new(accounts::GlobalAccount::try_from_slice(&account.data)?); 
     
     Ok(global_account)
 }
@@ -157,13 +140,9 @@ pub async fn get_bonding_curve_account(
 ) -> Result<Arc<accounts::BondingCurveAccount>, anyhow::Error> {
     let bonding_curve_pda = get_bonding_curve_pda(mint)
         .ok_or(anyhow!("Bonding curve not found"))?;
-    if let Some(account) = BONDING_CURVE_CACHE.read().await.get(&bonding_curve_pda) {
-        return Ok(account.clone());
-    }
     
     let account = rpc.get_account(&bonding_curve_pda)?;
     let bonding_curve = Arc::new(accounts::BondingCurveAccount::try_from_slice(&account.data)?);
-    BONDING_CURVE_CACHE.write().await.insert(bonding_curve_pda, bonding_curve.clone());
     Ok(bonding_curve)
 }
 
