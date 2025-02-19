@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSimulateTransactionConfig};
 use solana_sdk::{
-    commitment_config::CommitmentConfig, compute_budget::ComputeBudgetInstruction, instruction::Instruction, native_token::sol_to_lamports, pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction, transaction::Transaction
+    commitment_config::CommitmentConfig, compute_budget::ComputeBudgetInstruction, instruction::Instruction, native_token::sol_to_lamports, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, system_instruction, transaction::Transaction
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::instruction::close_account;
@@ -32,12 +32,12 @@ pub async fn sell(
     amount_token: Option<u64>,
     slippage_basis_points: Option<u64>,
     priority_fee: Option<PriorityFee>,
-) -> Result<(), anyhow::Error> {
+) -> Result<Signature, anyhow::Error> {
 
     let transaction = build_sell_transaction(rpc, payer, mint, amount_token, slippage_basis_points, priority_fee).await?;
-    rpc.send_and_confirm_transaction(&transaction)?;
+    let signature = rpc.send_and_confirm_transaction(&transaction)?;
 
-    Ok(())
+    Ok(signature)
 }
 
 /// Sell tokens by percentage
@@ -48,7 +48,7 @@ pub async fn sell_by_percent(
     percent: u64,
     slippage_basis_points: Option<u64>,
     priority_fee: Option<PriorityFee>,
-) -> Result<(), anyhow::Error> {
+) -> Result<Signature, anyhow::Error> {
     if percent == 0 || percent > 100 {
         return Err(anyhow!("Percentage must be between 1 and 100"));
     }
@@ -91,7 +91,7 @@ pub async fn sell_with_jito(
     let transaction = build_sell_transaction_with_jito(rpc, jito_client, payer, mint, amount_token, slippage_basis_points, jito_fee).await?;
     let signature = jito_client.send_transaction(&transaction).await?;
     
-    println!("Total Jito sell operation time: {:?}ms", start_time.elapsed().as_millis());
+    println!("Total Jito sell operation time: {:?}ms, signature: {}", start_time.elapsed().as_millis(), signature);
 
     Ok(signature)
 }

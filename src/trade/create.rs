@@ -76,7 +76,7 @@ pub async fn create_and_buy_list_with_jito(
     amount_sols: Vec<u64>,
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
-) -> Result<(), anyhow::Error> {
+) -> Result<String, anyhow::Error> {
     
     let start_time = Instant::now();
 
@@ -89,11 +89,11 @@ pub async fn create_and_buy_list_with_jito(
         transactions.push(buy_transaction);
     }
 
-    jito_client.send_transactions(&transactions).await?;
+    let signatures = jito_client.send_transactions(&transactions).await?;
 
     println!("Total Jito create and buy operation time: {:?}ms", start_time.elapsed().as_millis());
     
-    Ok(())
+    Ok(signatures)
 }
 
 pub async fn create_and_buy_with_jito(
@@ -105,17 +105,17 @@ pub async fn create_and_buy_with_jito(
     amount_sol: u64,
     slippage_basis_points: Option<u64>,
     jito_fee: Option<f64>,
-) -> Result<(), anyhow::Error> {
+) -> Result<String, anyhow::Error> {
 
     let start_time = Instant::now();
-    
+
     let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payer, mint, ipfs, amount_sol, slippage_basis_points, jito_fee).await?;
 
-    jito_client.send_transaction(&transaction).await?;
+    let signature = jito_client.send_transaction(&transaction).await?;
 
-    println!("Total Jito create and buy operation time: {:?}ms", start_time.elapsed().as_millis());
+    println!("Total Jito create and buy operation time: {:?}ms, signature: {}", start_time.elapsed().as_millis(), signature);
 
-    Ok(())
+    Ok(signature)
 }
 
 pub async fn build_create_and_buy_transaction(

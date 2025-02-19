@@ -105,7 +105,7 @@ impl PumpFun {
         amount_sols: Vec<u64>,
         slippage_basis_points: Option<u64>,
         jito_fee: Option<f64>,
-    ) -> Result<(), anyhow::Error> { 
+    ) -> Result<String, anyhow::Error> { 
         trade::create::create_and_buy_list_with_jito(
             &self.rpc,
             &self.jito_client.as_ref().unwrap(),
@@ -126,7 +126,7 @@ impl PumpFun {
         amount_sol: u64,
         slippage_basis_points: Option<u64>,
         jito_fee: Option<f64>,
-    ) -> Result<(), anyhow::Error> { 
+    ) -> Result<String, anyhow::Error> { 
         trade::create::create_and_buy_with_jito(
             &self.rpc,
             &self.jito_client.as_ref().unwrap(),
@@ -185,7 +185,7 @@ impl PumpFun {
         amount_token: Option<u64>,
         slippage_basis_points: Option<u64>,
         priority_fee: Option<PriorityFee>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<Signature, anyhow::Error> {
         trade::sell::sell(
             &self.rpc,
             payer,
@@ -204,7 +204,7 @@ impl PumpFun {
         percent: u64,
         slippage_basis_points: Option<u64>,
         priority_fee: Option<PriorityFee>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<Signature, anyhow::Error> {
         trade::sell::sell_by_percent(
             &self.rpc,
             payer,
