@@ -105,12 +105,20 @@ pub fn get_mint_authority_pda() -> Pubkey {
     *MINT_AUTHORITY_PDA
 }
 
+// #[inline]
+// pub fn get_bonding_curve_pda(mint: &Pubkey) -> Option<Pubkey> {
+//     Pubkey::try_find_program_address(
+//         &[constants::seeds::BONDING_CURVE_SEED, mint.as_ref()],
+//         &constants::accounts::PUMPFUN
+//     ).map(|(pubkey, _)| pubkey)
+// }
+
 #[inline]
 pub fn get_bonding_curve_pda(mint: &Pubkey) -> Option<Pubkey> {
-    Pubkey::try_find_program_address(
-        &[constants::seeds::BONDING_CURVE_SEED, mint.as_ref()],
-        &constants::accounts::PUMPFUN
-    ).map(|(pubkey, _)| pubkey)
+    let seeds: &[&[u8]; 2] = &[constants::seeds::BONDING_CURVE_SEED, mint.as_ref()];
+    let program_id: &Pubkey = &constants::accounts::PUMPFUN;
+    let pda: Option<(Pubkey, u8)> = Pubkey::try_find_program_address(seeds, program_id);
+    pda.map(|pubkey| pubkey.0)
 }
 
 #[inline]
