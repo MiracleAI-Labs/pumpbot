@@ -203,12 +203,15 @@ pub async fn build_buy_instructions_with_jito(
 
     println!("build_buy_instructions_with_jito");
     let global_account = get_global_account(rpc).await?;
+    println!("build_buy_instructions_with_jito 9999999999");
     let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
+    println!("build_buy_instructions_with_jito 1010101010");
     let buy_amount = bonding_curve_account
         .get_buy_price(amount_sol)
         .map_err(|e| anyhow!(e))?;
+    println!("build_buy_instructions_with_jito 1111111111");
     let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
-
+    println!("build_buy_instructions_with_jito 1212121212");
     println!("build_buy_instructions_with_jito 2");
     let mut instructions = vec![];
     let ata = get_associated_token_address(&payer.pubkey(), mint);
