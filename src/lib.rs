@@ -155,8 +155,7 @@ impl PumpFun {
         &self,
         payer: &Keypair,
         mint: &Pubkey,
-        buy_token_amount: u64,
-        max_sol_cost: u64,
+        amount_sol: u64,
         slippage_basis_points: Option<u64>,
         jito_fee: Option<f64>,
     ) -> Result<String, anyhow::Error> {
@@ -165,8 +164,7 @@ impl PumpFun {
             payer,
             self.jito_client.as_ref().unwrap(),
             mint,
-            buy_token_amount,
-            max_sol_cost,
+            amount_sol,
             slippage_basis_points,
             jito_fee,
         ).await

@@ -8,7 +8,7 @@ use spl_token::instruction::close_account;
 
 use std::time::Instant;
 
-use crate::{constants::{self, trade::{DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPAGE, JITO_TIP_AMOUNT}}, instruction, jito::JitoClient};
+use crate::{constants::trade::{DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPAGE, JITO_TIP_AMOUNT}, instruction, jito::JitoClient};
 
 use super::common::{calculate_with_slippage_sell, get_global_account, get_bonding_curve_account, create_priority_fee_instructions, PriorityFee};
 
@@ -203,7 +203,6 @@ pub async fn sell_with_jito(
     );
 
     let mut instructions = create_priority_fee_instructions(None);
-    let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     instructions.push(instruction::sell(
         payer,
         mint,
@@ -222,6 +221,7 @@ pub async fn sell_with_jito(
         &[&payer.pubkey()],
     )?);
 
+    let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
     instructions.push(
         system_instruction::transfer(
