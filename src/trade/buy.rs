@@ -212,6 +212,8 @@ pub async fn build_buy_instructions_with_jito(
         ));
     }
 
+    println!("payer: {}", payer.pubkey());
+    println!("mint: {}", mint);
     instructions.push(instruction::buy(
         payer,
         mint,
