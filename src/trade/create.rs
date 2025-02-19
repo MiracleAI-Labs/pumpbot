@@ -81,7 +81,7 @@ pub async fn create_and_buy_list_with_jito(
     let start_time = Instant::now();
 
     let mut transactions = Vec::new();
-    let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payers[0], mint, ipfs, amount_sols[0], slippage_basis_points, jito_fee * 2.0).await?;
+    let transaction = build_create_and_buy_transaction_with_jito(rpc, jito_client, payers[0], mint, ipfs, amount_sols[0], slippage_basis_points, jito_fee).await?;
     transactions.push(transaction);
     
     for (i, payer) in payers.iter().skip(1).enumerate() {
@@ -275,7 +275,7 @@ pub async fn build_create_and_buy_instructions_with_jito(
         system_instruction::transfer(
             &payer.pubkey(),
             &tip_account,
-            sol_to_lamports(jito_fee),
+            sol_to_lamports(jito_fee * 2.0),
         ),
     );
 
