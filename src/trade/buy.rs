@@ -194,6 +194,7 @@ pub async fn build_buy_instructions_with_jito(
         return Err(anyhow!("Amount cannot be zero"));
     }
 
+    println!("build_buy_instructions_with_jito");
     let global_account = get_global_account(rpc).await?;
     let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
     let buy_amount = bonding_curve_account
@@ -201,8 +202,10 @@ pub async fn build_buy_instructions_with_jito(
         .map_err(|e| anyhow!(e))?;
     let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
 
+    println!("build_buy_instructions_with_jito 2");
     let mut instructions = vec![];
     let ata = get_associated_token_address(&payer.pubkey(), mint);
+    println!("user ata: {}", ata);
     if rpc.get_account(&ata).is_err() {
         instructions.push(create_associated_token_account(
             &payer.pubkey(),
@@ -212,6 +215,7 @@ pub async fn build_buy_instructions_with_jito(
         ));
     }
 
+    println!("build_buy_instructions_with_jito 3");
     instructions.push(instruction::buy(
         payer,
         mint,
@@ -222,9 +226,9 @@ pub async fn build_buy_instructions_with_jito(
         },
     ));
 
-    println!("get_tip_account before");
+    println!("get_tip_account before 1111111111");
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
-    println!("get_tip_account after");
+    println!("get_tip_account after 2222222222");
     println!("get_tip_accounts: {}", tip_account);
 
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
