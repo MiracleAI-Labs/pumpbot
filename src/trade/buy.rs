@@ -194,15 +194,14 @@ pub async fn build_buy_instructions_with_jito(
     }
 
     let global_account = get_global_account(rpc).await?;
-    // let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
-    // let buy_amount = bonding_curve_account
-    //     .get_buy_price(amount_sol)
-    //     .map_err(|e| anyhow!(e))?;
+    let bonding_curve_account = get_bonding_curve_account(rpc, mint).await?;
+    let buy_amount = bonding_curve_account
+        .get_buy_price(amount_sol)
+        .map_err(|e| anyhow!(e))?;
     let buy_amount_with_slippage = calculate_with_slippage_buy(amount_sol, slippage_basis_points.unwrap_or(DEFAULT_SLIPPAGE));
     
     let mut instructions = vec![];
     let ata = get_associated_token_address(&payer.pubkey(), mint);
-    println!("user ata: {}", ata);
     if rpc.get_account(&ata).is_err() {
         instructions.push(create_associated_token_account(
             &payer.pubkey(),
@@ -212,14 +211,12 @@ pub async fn build_buy_instructions_with_jito(
         ));
     }
 
-    println!("payer: {}", payer.pubkey());
-    println!("mint: {}", mint);
     instructions.push(instruction::buy(
         payer,
         mint,
         &global_account.fee_recipient,
         instruction::Buy {
-            _amount: 1000000,
+            _amount: buy_amount,
             _max_sol_cost: buy_amount_with_slippage,
         },
     ));

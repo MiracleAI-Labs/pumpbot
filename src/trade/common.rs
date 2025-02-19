@@ -5,7 +5,8 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-use std::sync::Arc;
+use std::time::Duration;
+use std::{sync::Arc, thread::sleep};
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 
@@ -154,21 +155,15 @@ pub async fn get_bonding_curve_account(
     rpc: &RpcClient,
     mint: &Pubkey,
 ) -> Result<Arc<accounts::BondingCurveAccount>, anyhow::Error> {
-    println!("get_bonding_curve_account 1111111111");
     let bonding_curve_pda = get_bonding_curve_pda(mint)
         .ok_or(anyhow!("Bonding curve not found"))?;
-    println!("get_bonding_curve_account 2222222222");
     if let Some(account) = BONDING_CURVE_CACHE.read().await.get(&bonding_curve_pda) {
-        println!("get_bonding_curve_account 3333333333");
         return Ok(account.clone());
     }
-    println!("get_bonding_curve_account 4444444444");
+    
     let account = rpc.get_account(&bonding_curve_pda)?;
-    println!("get_bonding_curve_account 5555555555");
     let bonding_curve = Arc::new(accounts::BondingCurveAccount::try_from_slice(&account.data)?);
-    println!("get_bonding_curve_account 6666666666");
     BONDING_CURVE_CACHE.write().await.insert(bonding_curve_pda, bonding_curve.clone());
-    println!("get_bonding_curve_account 7777777777");
     Ok(bonding_curve)
 }
 
