@@ -217,7 +217,7 @@ pub async fn build_buy_instructions_with_jito(
         mint,
         &global_account.fee_recipient,
         instruction::Buy {
-            _amount: 0,
+            _amount: u64::MAX,
             _max_sol_cost: buy_amount_with_slippage,
         },
     ));
