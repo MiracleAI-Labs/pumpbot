@@ -223,6 +223,8 @@ pub async fn build_buy_instructions_with_jito(
     ));
 
     let tip_account = jito_client.get_tip_account().await.map_err(|e| anyhow!(e))?;
+    println!("Tip account: {}", tip_account);
+    
     let jito_fee = jito_fee.unwrap_or(JITO_TIP_AMOUNT);
     instructions.push(
         system_instruction::transfer(
