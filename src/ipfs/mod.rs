@@ -59,11 +59,12 @@ pub struct CreateTokenMetadata {
     pub telegram: Option<String>,
     /// Optional website URL
     pub website: Option<String>,
+
+    pub metadata_uri: Option<String>,
 }
 
 pub async fn create_token_metadata(metadata: CreateTokenMetadata, api_key: &str) -> Result<TokenMetadataIPFS, anyhow::Error> {
-    println!("create_token_metadata: {:?}", metadata);
-    let ipfs_url = if metadata.file.starts_with("http") {
+    let ipfs_url = if metadata.file.starts_with("http") || metadata.metadata_uri.is_some() {
         metadata.file
     } else {
         let base64_string = file_to_base64(&metadata.file).await?;
@@ -82,28 +83,36 @@ pub async fn create_token_metadata(metadata: CreateTokenMetadata, api_key: &str)
         website: metadata.website,
     };
 
-    let client = Client::new();
-    let response = client
-        .post("https://api.pinata.cloud/pinning/pinJSONToIPFS")
-        .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&token_metadata)
-        .send()
-        .await?;
-
-    // 确保请求成功
-    if response.status().is_success() {
-        let res_data: serde_json::Value = response.json().await?;
-        let ipfs_hash = res_data["IpfsHash"].as_str().unwrap();
-        let ipfs_url = format!("https://ipfs.io/ipfs/{}", ipfs_hash);
+    if metadata.metadata_uri.is_some() {
         let token_metadata_ipfs = TokenMetadataIPFS {
             metadata: token_metadata,
-            metadata_uri: ipfs_url,
+            metadata_uri: metadata.metadata_uri.unwrap(),
         };  
         Ok(token_metadata_ipfs)
     } else {
-        eprintln!("Error: {:?}", response.status());
-        Err(anyhow::anyhow!("Failed to create token metadata"))
+        let client = Client::new();
+        let response = client
+            .post("https://api.pinata.cloud/pinning/pinJSONToIPFS")
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&token_metadata)
+        .send()
+        .await?;
+
+        // 确保请求成功
+        if response.status().is_success() {
+            let res_data: serde_json::Value = response.json().await?;
+            let ipfs_hash = res_data["IpfsHash"].as_str().unwrap();
+            let ipfs_url = format!("https://ipfs.io/ipfs/{}", ipfs_hash);
+            let token_metadata_ipfs = TokenMetadataIPFS {
+                metadata: token_metadata,
+                metadata_uri: ipfs_url,
+            };  
+            Ok(token_metadata_ipfs)
+        } else {
+            eprintln!("Error: {:?}", response.status());
+            Err(anyhow::anyhow!("Failed to create token metadata"))
+        }
     }
 }
 
