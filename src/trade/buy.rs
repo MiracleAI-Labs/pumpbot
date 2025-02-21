@@ -222,7 +222,7 @@ pub async fn build_buy_instructions_with_jito(
         Ok(account) => account.get_buy_price(amount_sol).map_err(|e| anyhow!(e))?,
         Err(_e) => {
             let initial_buy_amount = get_initial_buy_price(&global_account, amount_sol).await?;
-            initial_buy_amount / 2
+            initial_buy_amount * 80 / 100
         }
     };
     
