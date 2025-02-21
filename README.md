@@ -3,7 +3,7 @@
 A comprehensive Rust SDK for seamless interaction with the PumpFun Solana program. This SDK provides a robust set of tools and interfaces to integrate PumpFun functionality into your applications.
 
 ## Usage
-Compared to pumpfun-sdk(https://github.com/MiracleAI-Labs/pumpfun-sdk), it adds the ability to create accounts and batch buy with multiple wallets, all bundled in a single Jito transaction. This ensures that all your wallet purchase transactions are prioritized over any snipers, trading bots, or regular users.
+Compared to pumpfun-sdk(https://github.com/MiracleAI-Labs/pumpfun-sdk), it adds the ability to create token and batch buy with multiple wallets, all bundled in a single Jito transaction. This ensures that all your wallet purchase transactions are prioritized over any snipers, trading bots, or regular users.
 
 ```rust
 // Create a new PumpFun client
