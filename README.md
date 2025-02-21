@@ -1,90 +1,20 @@
-# PumpFun Rust SDK
+# pumpbot Rust SDK
 
 A comprehensive Rust SDK for seamless interaction with the PumpFun Solana program. This SDK provides a robust set of tools and interfaces to integrate PumpFun functionality into your applications.
 
-
-# Explanation
-1. Add `logs_filters` to parse the logs.
-1. Add `logs_parser` to process the logs.
-2. Add `logs_data` to define the data structure of the logs.
-4. Add `logs_events` to define the event of the logs.
-3. Add `logs_subscribe` to subscribe the logs of the PumpFun program.
-6. Add `jito` to send transaction with Jito.
-
-## Installation
-
-Add the following to your `Cargo.toml`:
-
-```toml
-[dependencies]
-pumpbot = "2.4.5"
-```
-
 ## Usage
+Compared to pumpfun-sdk(https://github.com/MiracleAI-Labs/pumpfun-sdk), it adds the ability to create accounts and batch buy with multiple wallets, all bundled in a single Jito transaction. This ensures that all your wallet purchase transactions are prioritized over any snipers, trading bots, or regular users.
 
-### logs subscription for token create and trade  transaction
 ```rust
-use pumpbot::common::{
-    logs_events::DexEvent,
-    logs_subscribe::{tokens_subscription, stop_subscription}
-};
-use solana_sdk::commitment_config::CommitmentConfig;
-
-println!("Starting token subscription...");
-
-// wss 
-let ws_url = "wss://api.mainnet-beta.solana.com";
-
-// Set commitment
-let commitment = CommitmentConfig::confirmed();
-
-// Define callback function
-let callback = |event: DexEvent| {
-    match event {
-        DexEvent::NewToken(token_info) => {
-            println!("Received new token event: {:?}", token_info);
-        },
-        DexEvent::NewUserTrade(trade_info) => {
-            println!("Received new trade event: {:?}", trade_info);
-        },
-        DexEvent::NewBotTrade(trade_info) => {
-            println!("Received new bot trade event: {:?}", trade_info);
-        }
-        DexEvent::Error(err) => {
-            println!("Received error: {}", err);
-        }
-    }
-};
-
-// Start subscription
-let subscription = tokens_subscription(
-    ws_url,
-    commitment,
-    callback,
-    None
-).await.unwrap();
-
-tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-
-// Stop subscription
-stop_subscription(subscription).await;
-
-println!("Ended token subscription.");
-```
-
-### pumpfun Create, Buy, Sell
-```rust
-use solana_sdk::{
-    native_token::LAMPORTS_PER_SOL,
-    signature::{Keypair, Signature},
-    signer::Signer,
-};
-
-use pumpbot::{accounts::BondingCurveAccount, utils::CreateTokenMetadata, PriorityFee, PumpFun};
-
 // Create a new PumpFun client
-let payer: Keypair = Keypair::new();
-let client: PumpFun = PumpFun::new(Cluster::Mainnet, None, &payer, None, None);
+let rpc_url: &str = "https://api.mainnet-beta.solana.com";
+let jito_url: &str = "https://mainnet.block-engine.jito.wtf/api/v1/bundles";
+
+let pumpfun = PumpFun::new(
+    rpc_url.to_string(),
+    Some(CommitmentConfig::processed()),
+    Some(jito_url.to_string()),
+);
 
 // Mint keypair
 let mint: Keypair = Keypair::new();
@@ -100,35 +30,33 @@ let metadata: CreateTokenMetadata = CreateTokenMetadata {
     website: Some("https://example.com".to_string()),
 };
 
-// Optional priority fee to expedite transaction processing (e.g., 100 LAMPORTS per compute unit, equivalent to a 0.01 SOL priority fee)
-let fee: Option<PriorityFee> = Some(PriorityFee {
-    limit: Some(100_000),
-    price: Some(100_000_000),
-});
+// ${ipfs_api_key} for https://pinata.cloud 
+let ipfs_metadata = ipfs::create_token_metadata(metadata, "${ipfs_api_key}").await?;
 
-// Create token with metadata
-let signature: Signature = client.create(&mint, metadata.clone(), fee).await?;
-println!("Created token: {}", signature);
+// random buy amount
+let buy_amount_min = sol_to_lamports(0.1);
+let buy_amount_max = sol_to_lamports(0.5);
+let mut rng = rand::rng();
+let amount_sols: Vec<u64> = payers.iter()
+    .map(|_| sol_to_lamports(rng.random_range(buy_amount_min..=buy_amount_max)))
+    .collect();
 
-// Print amount of SOL and LAMPORTS
-let amount_sol: u64 = 1;
-let amount_lamports: u64 = LAMPORTS_PER_SOL * amount_sol;
-println!("Amount in SOL: {}", amount_sol);
-println!("Amount in LAMPORTS: {}", amount_lamports);
+let payers: Vec<Keypair> = vec![]; // payers for buy
+let payers_ref: Vec<&Keypair> = payers.iter().collect();
 
-// Create and buy tokens with metadata
-let signature: Signature = client.create_and_buy(&mint, metadata.clone(), amount_lamports, None, fee).await?;
-println!("Created and bought tokens: {}", signature);
+// jito fee
+let jito_fee = 0.001;
 
-// Print the curve
-let curve: BondingCurveAccount = client.get_bonding_curve_account(&mint.pubkey())?;
-println!("{:?}", curve);
+// create and buy with multiple wallets in a single Jito transaction
+pumpfun.create_and_buy_list_with_jito(payers_ref, &mint, ipfs_metadata, amount_sols, None, Some(jito_fee)).await?;
 
-// Buy tokens (ATA will be created automatically if needed)
-let signature: Signature = client.buy(&mint.pubkey(), amount_lamports, None, fee).await?;
-println!("Bought tokens: {}", signature);
+// buy with jito
+pumpfun.buy_with_jito(payer, &mint, amount_sol, None, Some(jito_fee)).await?;
 
-// Sell tokens (sell all tokens)
-let signature: Signature = client.sell(&mint.pubkey(), None, None, fee).await?;
-println!("Sold tokens: {}", signature);
+// sell with jito
+pumpfun.sell_with_jito(payer, &mint, amount_token, None, Some(jito_fee)).await?;
+
+// sell by percent with jito
+pumpfun.sell_by_percent_with_jito(payer, &mint, percent, None, Some(jito_fee)).await?;
+
 ```
